@@ -1,103 +1,307 @@
-import Image from "next/image";
+'use client';
+
+// Main application page with header, grid, and modals
+// Alternative: Consider using a layout system like react-mosaic for resizable panels
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useStore, initializeApp } from '@/lib/store';
+import { 
+  importCSV, 
+  parseFullCSV, 
+  downloadCSV, 
+  downloadMetadata,
+  validateCSVFile 
+} from '@/lib/csv';
+import { sheetDb } from '@/lib/persist';
+import Grid from '@/components/Grid';
+import FormulaEditor from '@/components/FormulaEditor';
+import Settings from '@/components/Settings';
 
 export default function Home() {
+  const store = useStore();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [recentSheets, setRecentSheets] = useState<Array<{ id: string; name: string }>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Initialize app on mount
+  useEffect(() => {
+    initializeApp();
+    loadRecentSheets();
+  }, []);
+  
+  const loadRecentSheets = async () => {
+    const sheets = await sheetDb.getAll();
+    setRecentSheets(sheets.slice(0, 5).map(s => ({ id: s.id, name: s.name })));
+  };
+  
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Validate file
+    const validation = validateCSVFile(file);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+    
+    setIsImporting(true);
+    setImportProgress(0);
+    
+    try {
+      // First, get a preview
+      const preview = await importCSV(file, (percent) => {
+        setImportProgress(Math.round(percent * 0.3)); // 30% for preview
+      });
+      
+      // Confirm import
+      const confirmed = confirm(
+        `Import CSV with ${preview.headers.length} columns and ${preview.totalRows} rows?\n\n` +
+        `Headers: ${preview.headers.slice(0, 5).join(', ')}${preview.headers.length > 5 ? '...' : ''}`
+      );
+      
+      if (!confirmed) {
+        setIsImporting(false);
+        return;
+      }
+      
+      // Parse full CSV
+      const sheetName = file.name.replace(/\.[^/.]+$/, '');
+      const sheet = await parseFullCSV(file, sheetName, (percent) => {
+        setImportProgress(30 + Math.round(percent * 0.7)); // 70% for full parse
+      });
+      
+      // Save to database
+      await sheetDb.create(sheet);
+      
+      // Load the sheet
+      store.loadSheet(sheet.id);
+      
+      // Refresh recent sheets
+      loadRecentSheets();
+    } catch (error) {
+      alert(`Failed to import CSV: ${(error as Error).message}`);
+    } finally {
+      setIsImporting(false);
+      setImportProgress(0);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+  
+  const handleNewSheet = async () => {
+    const name = prompt('Enter sheet name:');
+    if (name) {
+      await store.createSheet(name);
+      loadRecentSheets();
+    }
+  };
+  
+  const handleExportCSV = () => {
+    if (!store.currentSheet) return;
+    downloadCSV(store.currentSheet);
+  };
+  
+  const handleExportMetadata = () => {
+    if (!store.currentSheet) return;
+    downloadMetadata(store.currentSheet);
+  };
+  
+  const handleAddRow = () => {
+    store.addRow();
+  };
+  
+  const handleAddColumn = () => {
+    const name = prompt('Enter column name:');
+    if (name) {
+      store.addColumn(name, 'text');
+    }
+  };
+  
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h1 className="text-xl font-bold text-gray-900">
+              AI Sheet
+            </h1>
+            
+            {store.currentSheet && (
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-500">|</span>
+                <h2 className="text-lg font-medium text-gray-700">
+                  {store.currentSheet.name}
+                </h2>
+                <span className="text-sm text-gray-500">
+                  ({store.currentSheet.rows.length} rows × {store.currentSheet.columns.length} columns)
+                </span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* File Operations */}
+            <button
+              onClick={handleNewSheet}
+              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              New Sheet
+            </button>
+            
+            <label className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer">
+              Import CSV
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,.txt"
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={isImporting}
+              />
+            </label>
+            
+            {store.currentSheet && (
+              <>
+                <button
+                  onClick={handleExportCSV}
+                  className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                >
+                  Export CSV
+                </button>
+                
+                <button
+                  onClick={handleExportMetadata}
+                  className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+                  title="Export formulas and column configurations"
+                >
+                  Export Meta
+                </button>
+              </>
+            )}
+            
+            <div className="w-px h-6 bg-gray-300" />
+            
+            {/* Edit Operations */}
+            {store.currentSheet && (
+              <>
+                <button
+                  onClick={handleAddRow}
+                  className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  Add Row
+                </button>
+                
+                <button
+                  onClick={handleAddColumn}
+                  className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  Add Column
+                </button>
+              </>
+            )}
+            
+            <div className="w-px h-6 bg-gray-300" />
+            
+            {/* Settings */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-1.5 text-gray-600 hover:bg-gray-100 rounded"
+              title="Settings"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
+        
+        {/* Import Progress */}
+        {isImporting && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+              <span>Importing CSV...</span>
+              <span>{importProgress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${importProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </header>
+      
+      {/* Main Content */}
+      <main className="flex-1 min-h-0 overflow-hidden">
+        {store.currentSheet ? (
+          <Grid />
+        ) : (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+                Welcome to AI Sheet
+              </h2>
+              <p className="text-gray-600 mb-8 max-w-md">
+                Import a CSV file or create a new sheet to get started.
+                Add AI-powered columns to generate content using your data.
+              </p>
+              
+              <div className="flex flex-col items-center space-y-4">
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleNewSheet}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Create New Sheet
+                  </button>
+                  
+                  <label className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer">
+                    Import CSV
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isImporting}
+                    />
+                  </label>
+                </div>
+                
+                {recentSheets.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                      Recent Sheets
+                    </h3>
+                    <div className="space-y-1">
+                      {recentSheets.map(sheet => (
+                        <button
+                          key={sheet.id}
+                          onClick={() => store.loadSheet(sheet.id)}
+                          className="block w-full px-4 py-2 text-left text-sm bg-white border border-gray-200 rounded hover:bg-gray-50"
+                        >
+                          {sheet.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      
+      {/* Modals */}
+      <FormulaEditor />
+      <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

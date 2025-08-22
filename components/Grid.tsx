@@ -1,0 +1,594 @@
+'use client';
+
+// React Data Grid wrapper with custom header context menu
+// Alternative: Consider AG Grid Community for more advanced features
+
+import React, { useMemo, useCallback, useState, useRef } from 'react';
+import { DataGrid } from 'react-data-grid';
+import type { 
+  Column as RDGColumn,
+  RenderHeaderCellProps,
+  RenderCellProps,
+} from 'react-data-grid';
+import { clsx } from 'clsx';
+import { useStore } from '@/lib/store';
+import type { Column } from '@/lib/types';
+import ComputeControls from './ComputeControls';
+
+// Grid styles
+import 'react-data-grid/lib/styles.css';
+
+interface GridRow {
+  id: string;
+  [key: string]: any;
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  columnId: string;
+}
+
+interface CellContextMenuState {
+  x: number;
+  y: number;
+  rowId: string;
+  columnId: string;
+}
+
+// Custom header cell with context menu and double-click for AI columns
+function HeaderCell({ 
+  column, 
+  onContextMenu,
+  onDoubleClick 
+}: RenderHeaderCellProps<GridRow> & { 
+  onContextMenu: (e: React.MouseEvent, columnId: string) => void;
+  onDoubleClick: (columnId: string) => void;
+}) {
+  const store = useStore();
+  const col = store.currentSheet?.columns.find(c => c.id === column.key);
+  
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onContextMenu(e, column.key);
+  };
+  
+  const handleDoubleClick = () => {
+    // Only open formula editor for AI columns
+    if (col?.kind === 'ai') {
+      onDoubleClick(column.key);
+    }
+  };
+  
+  return (
+    <div 
+      className={clsx(
+        "flex items-center justify-between w-full h-full px-2",
+        col?.kind === 'ai' && "cursor-pointer"
+      )}
+      onContextMenu={handleContextMenu}
+      onDoubleClick={handleDoubleClick}
+      title={col?.kind === 'ai' ? 'Double-click to edit formula' : undefined}
+    >
+      <span className="truncate font-medium">{column.name}</span>
+      {col?.kind === 'ai' && (
+        <span className="ml-2 px-1.5 py-0.5 text-xs bg-ai-light text-ai-dark rounded inline-flex items-center gap-1">
+          <span>AI</span>
+          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// Custom cell renderer with state indicators and context menu
+function Cell({ 
+  row, 
+  column,
+  onContextMenu 
+}: RenderCellProps<GridRow> & {
+  onContextMenu?: (e: React.MouseEvent, rowId: string, columnId: string) => void;
+}) {
+  const store = useStore();
+  const sheetRow = store.currentSheet?.rows.find(r => r.id === row.id);
+  const col = store.currentSheet?.columns.find(c => c.id === column.key);
+  const cellMeta = sheetRow?.meta?.[column.key];
+  
+  const [showPopover, setShowPopover] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cellRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  
+  const cellValue = row[column.key];
+  
+  // Check if text is truncated
+  const isTruncated = useCallback(() => {
+    if (!textRef.current) return false;
+    return textRef.current.scrollWidth > textRef.current.clientWidth;
+  }, []);
+  
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    // Clear any existing timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    
+    // Set timeout for 1 second
+    hoverTimeoutRef.current = setTimeout(() => {
+      // Check if text is truncated when about to show popover
+      if (!textRef.current || textRef.current.scrollWidth <= textRef.current.clientWidth) {
+        return;
+      }
+      
+      const rect = cellRef.current?.getBoundingClientRect();
+      if (rect) {
+        setPopoverPosition({
+          x: rect.left,
+          y: rect.bottom + 5
+        });
+        setShowPopover(true);
+      }
+    }, 1000);
+  }, []);
+  
+  const handleMouseLeave = useCallback(() => {
+    // Clear timeout if mouse leaves before 1 second
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setShowPopover(false);
+  }, []);
+  
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  const getCellClassName = () => {
+    if (!cellMeta) return '';
+    
+    switch (cellMeta.state) {
+      case 'queued':
+        return 'bg-yellow-50 border-yellow-200';
+      case 'running':
+        return 'bg-blue-50 border-blue-200 animate-pulse-subtle';
+      case 'error':
+        return 'bg-red-50 border-red-200';
+      case 'done':
+        return col?.kind === 'ai' ? 'bg-green-50 border-green-200' : '';
+      default:
+        return '';
+    }
+  };
+  
+  const handleContextMenu = (e: React.MouseEvent) => {
+    // Only show context menu for AI columns
+    if (col?.kind === 'ai' && onContextMenu) {
+      e.preventDefault();
+      e.stopPropagation();
+      onContextMenu(e, row.id, column.key);
+    }
+  };
+  
+  return (
+    <>
+      <div 
+        ref={cellRef}
+        className={clsx(
+          'w-full h-full flex items-center px-2 relative',
+          getCellClassName(),
+          col?.kind === 'ai' && 'cursor-context-menu'
+        )}
+        title={cellMeta?.error || (col?.kind === 'ai' && !cellValue ? 'Right-click for options' : undefined)}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        <span ref={textRef} className="truncate">{cellValue}</span>
+        {cellMeta?.state === 'running' && (
+          <div className="absolute right-1 top-1/2 -translate-y-1/2">
+            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        {cellMeta?.state === 'error' && (
+          <div 
+            className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 cursor-help" 
+            title={cellMeta.error || 'Error computing cell'}
+          >
+            ⚠
+          </div>
+        )}
+      </div>
+      
+      {/* Popover for truncated content */}
+      {showPopover && cellValue && (
+        <div
+          className="fixed z-[100] bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-md"
+          style={{ 
+            left: popoverPosition.x, 
+            top: popoverPosition.y,
+            maxHeight: '300px',
+            overflowY: 'auto',
+            wordBreak: 'break-word'
+          }}
+          onMouseEnter={() => setShowPopover(true)}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="text-sm text-gray-700 whitespace-pre-wrap">{cellValue}</div>
+        </div>
+      )}
+    </>
+  );
+}
+
+export default function Grid() {
+  const store = useStore();
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [cellContextMenu, setCellContextMenu] = useState<CellContextMenuState | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const cellMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Convert sheet data to grid format
+  const rows: GridRow[] = useMemo(() => {
+    if (!store.currentSheet) return [];
+    
+    return store.currentSheet.rows.map(row => {
+      const gridRow: GridRow = { id: row.id };
+      
+      store.currentSheet!.columns.forEach(col => {
+        const value = row.values[col.id];
+        gridRow[col.id] = value === null || value === undefined ? '' : String(value);
+      });
+      
+      return gridRow;
+    });
+  }, [store.currentSheet]);
+  
+  // Handler for double-clicking AI column headers
+  const handleColumnDoubleClick = useCallback((columnId: string) => {
+    const column = store.currentSheet?.columns.find(c => c.id === columnId);
+    if (column && column.kind === 'ai') {
+      store.openFormulaEditor(column);
+    }
+  }, [store]);
+  
+  // Handler for cell context menu
+  const handleCellContextMenu = useCallback((e: React.MouseEvent, rowId: string, columnId: string) => {
+    setCellContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      rowId,
+      columnId,
+    });
+    // Close column context menu if open
+    setContextMenu(null);
+  }, []);
+  
+  // Define columns for react-data-grid
+  const columns: RDGColumn<GridRow>[] = useMemo(() => {
+    if (!store.currentSheet) return [];
+    
+    return store.currentSheet.columns.map(col => ({
+      key: col.id,
+      name: col.name,
+      resizable: true,
+      editable: col.kind !== 'ai', // AI columns should not be directly editable
+      width: 200,
+      minWidth: 100,
+      maxWidth: 500,
+      renderHeaderCell: (props) => (
+        <HeaderCell 
+          {...props} 
+          onContextMenu={(e, colId) => {
+            setContextMenu({
+              x: e.clientX,
+              y: e.clientY,
+              columnId: colId,
+            });
+          }}
+          onDoubleClick={handleColumnDoubleClick}
+        />
+      ),
+      renderCell: (props) => <Cell {...props} onContextMenu={handleCellContextMenu} />,
+    }));
+  }, [store.currentSheet, handleColumnDoubleClick, handleCellContextMenu]);
+  
+  // Handle cell edits
+  const handleRowsChange = useCallback((newRows: GridRow[]) => {
+    if (!store.currentSheet) return;
+    
+    // Find the changed row and column
+    for (let i = 0; i < newRows.length; i++) {
+      const newRow = newRows[i];
+      const oldRow = rows[i];
+      
+      if (!oldRow) continue;
+      
+      // Find which column changed
+      for (const col of store.currentSheet.columns) {
+        if (newRow[col.id] !== oldRow[col.id]) {
+          // Update the cell value
+          const value = newRow[col.id];
+          store.updateCell(
+            newRow.id,
+            col.id,
+            value === '' ? null : value
+          );
+          break;
+        }
+      }
+    }
+  }, [store, rows]);
+  
+  // Context menu actions
+  const handleContextMenuAction = useCallback((action: string) => {
+    if (!contextMenu) return;
+    
+    const column = store.currentSheet?.columns.find(c => c.id === contextMenu.columnId);
+    if (!column) return;
+    
+    switch (action) {
+      case 'add':
+        const name = prompt('Enter column name:');
+        if (name) {
+          store.addColumn(name, 'text', contextMenu.columnId);
+        }
+        break;
+        
+      case 'rename':
+        const newName = prompt('Enter new name:', column.name);
+        if (newName && newName !== column.name) {
+          store.updateColumn(contextMenu.columnId, { name: newName });
+        }
+        break;
+        
+      case 'delete':
+        if (confirm(`Delete column "${column.name}"?`)) {
+          store.deleteColumn(contextMenu.columnId);
+        }
+        break;
+        
+      case 'convert':
+        store.convertToAIColumn(contextMenu.columnId);
+        store.openFormulaEditor(
+          store.currentSheet!.columns.find(c => c.id === contextMenu.columnId)!
+        );
+        break;
+        
+      case 'edit':
+        if (column.kind === 'ai') {
+          store.openFormulaEditor(column);
+        }
+        break;
+        
+      case 'compute':
+        store.startCompute(contextMenu.columnId);
+        break;
+        
+      case 'retry':
+        store.startCompute(contextMenu.columnId, true);
+        break;
+        
+      case 'stop':
+        store.stopCompute();
+        break;
+    }
+    
+    setContextMenu(null);
+  }, [contextMenu, store]);
+  
+  // Cell context menu actions
+  const handleCellContextMenuAction = useCallback(async (action: string) => {
+    if (!cellContextMenu) return;
+    
+    const column = store.currentSheet?.columns.find(c => c.id === cellContextMenu.columnId);
+    if (!column || column.kind !== 'ai') return;
+    
+    switch (action) {
+      case 'compute-cell':
+        // Compute single cell
+        await store.computeSingleCell(cellContextMenu.rowId, cellContextMenu.columnId);
+        break;
+        
+      case 'clear-cell':
+        // Clear cell value and state
+        store.updateCell(cellContextMenu.rowId, cellContextMenu.columnId, '');
+        store.updateCellState(cellContextMenu.rowId, cellContextMenu.columnId, 'idle');
+        break;
+        
+      case 'retry-cell':
+        // Retry if failed
+        const row = store.currentSheet?.rows.find(r => r.id === cellContextMenu.rowId);
+        if (row?.meta?.[cellContextMenu.columnId]?.state === 'error') {
+          await store.computeSingleCell(cellContextMenu.rowId, cellContextMenu.columnId);
+        }
+        break;
+    }
+    
+    setCellContextMenu(null);
+  }, [cellContextMenu, store]);
+  
+  // Close context menus on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+      if (cellMenuRef.current && !cellMenuRef.current.contains(e.target as Node)) {
+        setCellContextMenu(null);
+      }
+    };
+    
+    if (contextMenu || cellContextMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [contextMenu, cellContextMenu]);
+  
+  if (!store.currentSheet) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500">
+        No sheet loaded. Import a CSV or create a new sheet to get started.
+      </div>
+    );
+  }
+  
+  const contextColumn = contextMenu 
+    ? store.currentSheet.columns.find(c => c.id === contextMenu.columnId)
+    : null;
+  
+  return (
+    <div className="h-full flex flex-col">
+      {contextColumn?.kind === 'ai' && (
+        <ComputeControls columnId={contextMenu!.columnId} />
+      )}
+      
+      <div className="flex-1 min-h-0" style={{ contain: 'size' }}>
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          onRowsChange={handleRowsChange}
+          className="rdg-light"
+          style={{ height: '100%', width: '100%' }}
+          rowHeight={35}
+          headerRowHeight={40}
+          enableVirtualization
+        />
+      </div>
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          ref={menuRef}
+          className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+            onClick={() => handleContextMenuAction('add')}
+          >
+            Add Column
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+            onClick={() => handleContextMenuAction('rename')}
+          >
+            Rename
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+            onClick={() => handleContextMenuAction('delete')}
+          >
+            Delete
+          </button>
+          
+          <div className="border-t border-gray-200 my-1" />
+          
+          {contextColumn?.kind !== 'ai' ? (
+            <button
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+              onClick={() => handleContextMenuAction('convert')}
+            >
+              Convert to AI Column
+            </button>
+          ) : (
+            <>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                onClick={() => handleContextMenuAction('edit')}
+              >
+                Edit Formula (or double-click header)
+              </button>
+              <div className="border-t border-gray-200 my-1" />
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                onClick={() => handleContextMenuAction('compute')}
+              >
+                Compute
+              </button>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                onClick={() => handleContextMenuAction('retry')}
+              >
+                Retry Failed
+              </button>
+              {store.isComputing && (
+                <button
+                  className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm text-red-600"
+                  onClick={() => handleContextMenuAction('stop')}
+                >
+                  Stop
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+      
+      {/* Cell Context Menu */}
+      {cellContextMenu && (() => {
+        const cellRow = store.currentSheet?.rows.find(r => r.id === cellContextMenu.rowId);
+        const cellColumn = store.currentSheet?.columns.find(c => c.id === cellContextMenu.columnId);
+        const cellMeta = cellRow?.meta?.[cellContextMenu.columnId];
+        
+        if (!cellColumn || cellColumn.kind !== 'ai') return null;
+        
+        return (
+          <div
+            ref={cellMenuRef}
+            className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50"
+            style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
+          >
+            <div className="px-4 py-2 text-xs font-semibold text-gray-500 border-b border-gray-200">
+              Cell: {cellColumn.name}
+            </div>
+            
+            <button
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm font-medium"
+              onClick={() => handleCellContextMenuAction('compute-cell')}
+              disabled={cellMeta?.state === 'running'}
+            >
+              {cellMeta?.state === 'running' ? 'Computing...' : 'Compute This Cell'}
+            </button>
+            
+            {cellMeta?.state === 'error' && (
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                onClick={() => handleCellContextMenuAction('retry-cell')}
+              >
+                Retry (Failed)
+              </button>
+            )}
+            
+            <button
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+              onClick={() => handleCellContextMenuAction('clear-cell')}
+            >
+              Clear Cell
+            </button>
+            
+            <div className="border-t border-gray-200 my-1" />
+            
+            <button
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm text-blue-600"
+              onClick={() => {
+                setCellContextMenu(null);
+                store.startCompute(cellContextMenu.columnId);
+              }}
+            >
+              Compute Entire Column
+            </button>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
