@@ -105,3 +105,68 @@ body {
     background: #6b7280;
   }
 }
+
+/* AI-specific colors */
+.bg-ai-light {
+  background-color: #dbeafe;
+}
+
+.text-ai-dark {
+  color: #1e40af;
+}
+
+/* Subtle pulse animation */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Context menu cursor */
+.cursor-context-menu {
+  cursor: context-menu;
+}
+
+/* Clean grid header styling */
+.rdg-header-row {
+  font-weight: 500;
+  background: linear-gradient(to bottom, #ffffff, #f9fafb);
+  border-bottom: 2px solid #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .rdg-header-row {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border-bottom: 2px solid #374151;
+  }
+}
+
+/* Improved cell focus styles */
+.rdg-cell[aria-selected="true"] {
+  outline: 2px solid #3b82f6;
+  outline-offset: -1px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .rdg-cell[aria-selected="true"] {
+    outline: 2px solid #60a5fa;
+  }
+}
+
+/* Better hover state for cells */
+.rdg-cell:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .rdg-cell:hover {
+    background-color: rgba(96, 165, 250, 0.1);
+  }
+}

@@ -13,15 +13,13 @@ import type {
 } from 'react-data-grid';
 import { clsx } from 'clsx';
 import { useStore } from '@/lib/store';
-import type { Column } from '@/lib/types';
-import ComputeControls from './ComputeControls';
 
 // Grid styles
 import 'react-data-grid/lib/styles.css';
 
 interface GridRow {
   id: string;
-  [key: string]: any;
+  [key: string]: string | number | null;
 }
 
 interface ContextMenuState {
@@ -65,7 +63,7 @@ function HeaderCell({
     <div 
       className={clsx(
         "flex items-center justify-between w-full h-full px-2",
-        col?.kind === 'ai' && "cursor-pointer"
+        col?.kind === 'ai' && "cursor-pointer bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
       )}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
@@ -73,11 +71,8 @@ function HeaderCell({
     >
       <span className="truncate font-medium">{column.name}</span>
       {col?.kind === 'ai' && (
-        <span className="ml-2 px-1.5 py-0.5 text-xs bg-ai-light text-ai-dark rounded inline-flex items-center gap-1">
-          <span>AI</span>
-          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
+        <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full inline-flex items-center gap-1 font-semibold">
+          AI
         </span>
       )}
     </div>
@@ -200,11 +195,6 @@ function Cell({
   
   const cellValue = row[column.key];
   
-  // Check if text is truncated
-  const isTruncated = useCallback(() => {
-    if (!textRef.current) return false;
-    return textRef.current.scrollWidth > textRef.current.clientWidth;
-  }, []);
   
   const handleMouseEnter = useCallback(() => {
     // Clear any existing timeout
@@ -318,6 +308,11 @@ export default function Grid() {
   const menuRef = useRef<HTMLDivElement>(null);
   const cellMenuRef = useRef<HTMLDivElement>(null);
   
+  // Handle cell selection
+  const handleCellClick = useCallback((rowId: string, columnId: string) => {
+    store.setSelectedCell({ rowId, columnId });
+  }, [store]);
+  
   // Convert sheet data to grid format
   const rows: GridRow[] = useMemo(() => {
     if (!store.currentSheet) return [];
@@ -379,12 +374,17 @@ export default function Grid() {
           onDoubleClick={handleColumnDoubleClick}
         />
       ),
-      // Only use custom renderCell for AI columns, let normal columns use default editor
-      renderCell: col.kind === 'ai' 
-        ? (props) => <Cell {...props} onContextMenu={handleCellContextMenu} />
-        : undefined,
+      // Use custom renderCell for all columns to handle selection
+      renderCell: (props) => (
+        <div 
+          onClick={() => handleCellClick(props.row.id, props.column.key)}
+          className="w-full h-full"
+        >
+          <Cell {...props} onContextMenu={handleCellContextMenu} />
+        </div>
+      ),
     }));
-  }, [store.currentSheet, handleColumnDoubleClick, handleCellContextMenu]);
+  }, [store.currentSheet, handleColumnDoubleClick, handleCellContextMenu, handleCellClick]);
   
   // Handle cell edits
   const handleRowsChange = useCallback((newRows: GridRow[], { indexes }: { indexes: number[] }) => {
@@ -532,16 +532,8 @@ export default function Grid() {
     ? store.currentSheet.columns.find(c => c.id === contextMenu.columnId)
     : null;
   
-  // Get all AI columns for compute controls
-  const aiColumns = store.currentSheet?.columns.filter(col => col.kind === 'ai') || [];
-  
   return (
     <div className="h-full flex flex-col">
-      {/* Show compute controls for all AI columns */}
-      {aiColumns.map(column => (
-        <ComputeControls key={column.id} columnId={column.id} />
-      ))}
-      
       <div className="flex-1 min-h-0" style={{ contain: 'size' }}>
         <DataGrid
           columns={columns}
