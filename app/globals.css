@@ -48,6 +48,21 @@ body {
   --rdg-font-size: 14px;
 }
 
+/* Dark mode styles for React Data Grid */
+@media (prefers-color-scheme: dark) {
+  .rdg-light {
+    --rdg-color: #e5e7eb;
+    --rdg-background-color: #111827;
+    --rdg-header-background-color: #1f2937;
+    --rdg-row-hover-background-color: #374151;
+    --rdg-row-selected-background-color: #312e81;
+    --rdg-row-selected-hover-background-color: #3730a3;
+    --rdg-checkbox-focus-color: #6366f1;
+    --rdg-border-color: #374151;
+    --rdg-selection-color: #6366f1;
+  }
+}
+
 .rdg-cell {
   border-right: 1px solid var(--rdg-border-color);
   border-bottom: 1px solid var(--rdg-border-color);
@@ -74,4 +89,19 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: #1f2937;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #4b5563;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
 }

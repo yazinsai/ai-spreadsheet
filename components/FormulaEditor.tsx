@@ -95,9 +95,9 @@ export default function FormulaEditor() {
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
             Edit AI Formula - {editingColumn.name}
           </h2>
         </div>
@@ -105,7 +105,7 @@ export default function FormulaEditor() {
         <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-180px)]">
           {/* Formula Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Formula
             </label>
             <textarea
@@ -113,10 +113,11 @@ export default function FormulaEditor() {
               onChange={(e) => setFormula(e.target.value)}
               className={clsx(
                 'w-full px-3 py-2 border rounded-md font-mono text-sm',
+                'bg-white dark:bg-gray-800 text-gray-900 dark:text-white',
                 'focus:outline-none focus:ring-2',
                 validation.valid 
-                  ? 'border-gray-300 focus:ring-blue-500' 
-                  : 'border-red-300 focus:ring-red-500'
+                  ? 'border-gray-300 dark:border-gray-600 focus:ring-blue-500' 
+                  : 'border-red-300 dark:border-red-700 focus:ring-red-500'
               )}
               rows={4}
               placeholder='=AI("Generate a summary for {{Column Name}}")'
@@ -147,13 +148,13 @@ export default function FormulaEditor() {
           {/* Model Settings */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Model
               </label>
               <select
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {MODEL_OPTIONS.map(model => (
                   <option key={model.id} value={model.id}>
@@ -164,7 +165,7 @@ export default function FormulaEditor() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Temperature ({temperature})
               </label>
               <input
@@ -179,7 +180,7 @@ export default function FormulaEditor() {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Max Tokens
               </label>
               <input
@@ -188,7 +189,7 @@ export default function FormulaEditor() {
                 max="4096"
                 value={maxTokens}
                 onChange={(e) => setMaxTokens(parseInt(e.target.value) || 512)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -196,14 +197,14 @@ export default function FormulaEditor() {
           {/* Preview */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Preview (Row {previewRow + 1})
               </label>
               {currentSheet.rows.length > 1 && (
                 <select
                   value={previewRow}
                   onChange={(e) => setPreviewRow(parseInt(e.target.value))}
-                  className="px-2 py-1 border border-gray-300 rounded text-sm"
+                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded text-sm"
                 >
                   {currentSheet.rows.map((_, i) => (
                     <option key={i} value={i}>
@@ -214,13 +215,13 @@ export default function FormulaEditor() {
               )}
             </div>
             
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
               {preview.rendered ? (
-                <pre className="whitespace-pre-wrap text-sm font-mono">
+                <pre className="whitespace-pre-wrap text-sm font-mono text-gray-900 dark:text-gray-100">
                   {preview.rendered}
                 </pre>
               ) : (
-                <span className="text-gray-500 text-sm italic">
+                <span className="text-gray-500 dark:text-gray-400 text-sm italic">
                   No preview available
                 </span>
               )}
@@ -238,22 +239,22 @@ export default function FormulaEditor() {
           </div>
           
           {/* Help Text */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm text-blue-800 dark:text-blue-300">
               <strong>Formula Syntax:</strong> Use {`{{Column Name}}`} to reference other columns.
               Example: {`=AI("Summarize {{Product}} for {{Customer}}")`}
             </p>
-            <p className="text-sm text-blue-800 mt-1">
+            <p className="text-sm text-blue-800 dark:text-blue-300 mt-1">
               <strong>Options:</strong> You can override settings in the formula:
               {` =AI("...", {"temperature": 0.5, "maxTokens": 1000, "model": "openai/gpt-4"})`}
             </p>
           </div>
         </div>
         
-        <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
           <button
             onClick={handleCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             Cancel
           </button>

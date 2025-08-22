@@ -35,7 +35,10 @@ export default function ComputeControls({ columnId }: ComputeControlsProps) {
   }, [progress.total, progress.done, progress.failed]);
   
   const handleCompute = useCallback(async (retry = false) => {
+    console.log('Starting compute for column:', columnId, { retry, column });
+    
     if (!currentSheet || !column || column.kind !== 'ai' || !column.formula) {
+      console.error('Cannot compute - missing requirements:', { currentSheet: !!currentSheet, column, formula: column?.formula });
       return;
     }
     
@@ -45,6 +48,7 @@ export default function ComputeControls({ columnId }: ComputeControlsProps) {
       alert(`Invalid formula: ${parsed.error}`);
       return;
     }
+    console.log('Parsed formula:', parsed);
     
     // Prepare column map
     const columnsByName = new Map(currentSheet.columns.map(col => [col.name, col]));
@@ -85,8 +89,11 @@ export default function ComputeControls({ columnId }: ComputeControlsProps) {
     }
     
     if (tasks.length === 0) {
+      console.log('No tasks to compute');
       return;
     }
+    
+    console.log(`Starting compute with ${tasks.length} tasks`, tasks.slice(0, 3)); // Log first 3 tasks
     
     // Start compute
     store.startCompute(columnId, retry);
@@ -97,28 +104,45 @@ export default function ComputeControls({ columnId }: ComputeControlsProps) {
         tasks,
         settings.concurrency,
         (result) => {
+          // Get current progress state from store
+          const currentProgress = store.computeProgress[columnId] || { 
+            total: 0, queued: 0, running: 0, done: 0, failed: 0 
+          };
+          
           // Update cell with result
           if (result.error) {
             store.updateCellState(result.rowId, result.columnId, 'error', result.error);
             store.updateComputeProgress(columnId, {
-              failed: (progress.failed || 0) + 1,
-              queued: Math.max(0, (progress.queued || 0) - 1),
+              failed: currentProgress.failed + 1,
+              running: Math.max(0, currentProgress.running - 1),
             });
           } else {
             store.updateCell(result.rowId, result.columnId, result.value);
             store.updateCellState(result.rowId, result.columnId, 'done');
             store.updateComputeProgress(columnId, {
-              done: (progress.done || 0) + 1,
-              queued: Math.max(0, (progress.queued || 0) - 1),
+              done: currentProgress.done + 1,
+              running: Math.max(0, currentProgress.running - 1),
             });
           }
           
           // Auto-save periodically
-          if ((progress.done + progress.failed) % 10 === 0) {
+          const totalProcessed = currentProgress.done + currentProgress.failed + 1;
+          if (totalProcessed % 10 === 0) {
             store.saveSheet();
           }
         },
-        store.abortController?.signal
+        store.abortController?.signal,
+        (task) => {
+          // Task is starting - move from queued to running
+          const currentProgress = store.computeProgress[columnId] || { 
+            total: 0, queued: 0, running: 0, done: 0, failed: 0 
+          };
+          store.updateCellState(task.rowId, task.columnId, 'running');
+          store.updateComputeProgress(columnId, {
+            running: currentProgress.running + 1,
+            queued: Math.max(0, currentProgress.queued - 1),
+          });
+        }
       );
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -132,7 +156,7 @@ export default function ComputeControls({ columnId }: ComputeControlsProps) {
       store.stopCompute();
       store.saveSheet();
     }
-  }, [currentSheet, column, columnId, settings, store, progress]);
+  }, [currentSheet, column, columnId, settings, store]);
   
   if (!column || column.kind !== 'ai') {
     return null;

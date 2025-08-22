@@ -162,7 +162,7 @@ function CellPopover({
   
   return ReactDOM.createPortal(
     <div
-      className="fixed z-[99999] bg-white border border-gray-300 rounded-lg shadow-xl p-3 max-w-md pointer-events-auto"
+      className="fixed z-[99999] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl p-3 max-w-md pointer-events-auto"
       style={{ 
         left: `${position.x}px`, 
         top: `${position.y}px`,
@@ -173,7 +173,7 @@ function CellPopover({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div className="text-sm text-gray-700 whitespace-pre-wrap">{content}</div>
+      <div className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{content}</div>
     </div>,
     document.body
   );
@@ -249,13 +249,13 @@ function Cell({
     
     switch (cellMeta.state) {
       case 'queued':
-        return 'bg-yellow-50 border-yellow-200';
+        return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
       case 'running':
-        return 'bg-blue-50 border-blue-200 animate-pulse-subtle';
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 animate-pulse-subtle';
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
       case 'done':
-        return col?.kind === 'ai' ? 'bg-green-50 border-green-200' : '';
+        return col?.kind === 'ai' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : '';
       default:
         return '';
     }
@@ -379,23 +379,29 @@ export default function Grid() {
           onDoubleClick={handleColumnDoubleClick}
         />
       ),
-      renderCell: (props) => <Cell {...props} onContextMenu={handleCellContextMenu} />,
+      // Only use custom renderCell for AI columns, let normal columns use default editor
+      renderCell: col.kind === 'ai' 
+        ? (props) => <Cell {...props} onContextMenu={handleCellContextMenu} />
+        : undefined,
     }));
   }, [store.currentSheet, handleColumnDoubleClick, handleCellContextMenu]);
   
   // Handle cell edits
-  const handleRowsChange = useCallback((newRows: GridRow[]) => {
+  const handleRowsChange = useCallback((newRows: GridRow[], { indexes }: { indexes: number[] }) => {
     if (!store.currentSheet) return;
     
-    // Find the changed row and column
-    for (let i = 0; i < newRows.length; i++) {
-      const newRow = newRows[i];
-      const oldRow = rows[i];
+    // Process only the changed rows
+    indexes.forEach(index => {
+      const newRow = newRows[index];
+      const oldRow = rows[index];
       
-      if (!oldRow) continue;
+      if (!oldRow || !newRow) return;
       
       // Find which column changed
       for (const col of store.currentSheet.columns) {
+        // Skip AI columns as they shouldn't be directly editable
+        if (col.kind === 'ai') continue;
+        
         if (newRow[col.id] !== oldRow[col.id]) {
           // Update the cell value
           const value = newRow[col.id];
@@ -404,10 +410,9 @@ export default function Grid() {
             col.id,
             value === '' ? null : value
           );
-          break;
         }
       }
-    }
+    });
   }, [store, rows]);
   
   // Context menu actions
@@ -527,11 +532,15 @@ export default function Grid() {
     ? store.currentSheet.columns.find(c => c.id === contextMenu.columnId)
     : null;
   
+  // Get all AI columns for compute controls
+  const aiColumns = store.currentSheet?.columns.filter(col => col.kind === 'ai') || [];
+  
   return (
     <div className="h-full flex flex-col">
-      {contextColumn?.kind === 'ai' && (
-        <ComputeControls columnId={contextMenu!.columnId} />
-      )}
+      {/* Show compute controls for all AI columns */}
+      {aiColumns.map(column => (
+        <ComputeControls key={column.id} columnId={column.id} />
+      ))}
       
       <div className="flex-1 min-h-0" style={{ contain: 'size' }}>
         <DataGrid
@@ -550,33 +559,33 @@ export default function Grid() {
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50"
+          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 z-50"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
             onClick={() => handleContextMenuAction('add')}
           >
             Add Column
           </button>
           <button
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
             onClick={() => handleContextMenuAction('rename')}
           >
             Rename
           </button>
           <button
-            className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
             onClick={() => handleContextMenuAction('delete')}
           >
             Delete
           </button>
           
-          <div className="border-t border-gray-200 my-1" />
+          <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
           
           {contextColumn?.kind !== 'ai' ? (
             <button
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
               onClick={() => handleContextMenuAction('convert')}
             >
               Convert to AI Column
@@ -584,27 +593,27 @@ export default function Grid() {
           ) : (
             <>
               <button
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                 onClick={() => handleContextMenuAction('edit')}
               >
                 Edit Formula (or double-click header)
               </button>
-              <div className="border-t border-gray-200 my-1" />
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
               <button
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                 onClick={() => handleContextMenuAction('compute')}
               >
                 Compute
               </button>
               <button
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                 onClick={() => handleContextMenuAction('retry')}
               >
                 Retry Failed
               </button>
               {store.isComputing && (
                 <button
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm text-red-600"
+                  className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-red-600 dark:text-red-400"
                   onClick={() => handleContextMenuAction('stop')}
                 >
                   Stop
@@ -626,15 +635,15 @@ export default function Grid() {
         return (
           <div
             ref={cellMenuRef}
-            className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50"
+            className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 z-50"
             style={{ left: cellContextMenu.x, top: cellContextMenu.y }}
           >
-            <div className="px-4 py-2 text-xs font-semibold text-gray-500 border-b border-gray-200">
+            <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
               Cell: {cellColumn.name}
             </div>
             
             <button
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm font-medium"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100"
               onClick={() => handleCellContextMenuAction('compute-cell')}
               disabled={cellMeta?.state === 'running'}
             >
@@ -643,7 +652,7 @@ export default function Grid() {
             
             {cellMeta?.state === 'error' && (
               <button
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-orange-600 dark:text-orange-400"
                 onClick={() => handleCellContextMenuAction('retry-cell')}
               >
                 Retry (Failed)
@@ -651,16 +660,16 @@ export default function Grid() {
             )}
             
             <button
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-red-600 dark:text-red-400"
               onClick={() => handleCellContextMenuAction('clear-cell')}
             >
               Clear Cell
             </button>
             
-            <div className="border-t border-gray-200 my-1" />
+            <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
             
             <button
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm text-blue-600"
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-blue-600 dark:text-blue-400"
               onClick={() => {
                 setCellContextMenu(null);
                 store.startCompute(cellContextMenu.columnId);

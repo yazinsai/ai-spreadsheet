@@ -2,6 +2,7 @@
 // Alternative: Consider using Vercel AI SDK for streaming support
 
 import type { ComputeTask, ComputeResult } from './types';
+import pLimit from 'p-limit';
 
 // OpenRouter API configuration
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -55,8 +56,10 @@ export async function getCompletion(
   signal?: AbortSignal
 ): Promise<ComputeResult> {
   const apiKey = getApiKey();
+  console.log('getCompletion called, API key present:', !!apiKey);
   
   if (!apiKey) {
+    console.error('No API key found in localStorage');
     return {
       rowId: task.rowId,
       columnId: task.columnId,
@@ -175,10 +178,13 @@ export async function batchCompletions(
   tasks: ComputeTask[],
   concurrency: number,
   onProgress: (result: ComputeResult) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  onTaskStart?: (task: ComputeTask) => void
 ): Promise<ComputeResult[]> {
-  const { default: pLimit } = await import('p-limit');
+  console.log(`batchCompletions called with ${tasks.length} tasks, concurrency: ${concurrency}`);
+  
   const limit = pLimit(concurrency);
+  console.log('p-limit initialized successfully');
   
   const results = await Promise.all(
     tasks.map((task) =>
@@ -192,7 +198,14 @@ export async function batchCompletions(
           };
         }
         
+        // Notify that task is starting
+        if (onTaskStart) {
+          console.log('Task starting:', task.rowId);
+          onTaskStart(task);
+        }
+        
         const result = await getCompletion(task, signal);
+        console.log('Task completed:', task.rowId, result.error ? 'with error' : 'successfully');
         onProgress(result);
         return result;
       })
