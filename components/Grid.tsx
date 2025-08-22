@@ -4,6 +4,7 @@
 // Alternative: Consider AG Grid Community for more advanced features
 
 import React, { useMemo, useCallback, useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { DataGrid } from 'react-data-grid';
 import type { 
   Column as RDGColumn,
@@ -83,6 +84,101 @@ function HeaderCell({
   );
 }
 
+// Popover component that renders through a Portal
+function CellPopover({ 
+  show, 
+  content, 
+  targetElement,
+  onMouseEnter,
+  onMouseLeave 
+}: { 
+  show: boolean;
+  content: string;
+  targetElement: HTMLElement | null;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  
+  React.useEffect(() => {
+    if (show && targetElement) {
+      const updatePosition = () => {
+        const rect = targetElement.getBoundingClientRect();
+        
+        // Calculate position relative to viewport
+        let x = rect.left;
+        let y = rect.bottom + 5;
+        
+        // Get viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Estimate popover dimensions
+        const popoverWidth = Math.min(384, viewportWidth - 20); // max-w-md is 384px
+        const popoverMaxHeight = 300;
+        
+        // Adjust horizontal position to keep popover in viewport
+        if (x + popoverWidth > viewportWidth - 10) {
+          x = Math.max(10, viewportWidth - popoverWidth - 10);
+        }
+        if (x < 10) {
+          x = 10;
+        }
+        
+        // Check if there's enough space below
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        
+        if (spaceBelow < popoverMaxHeight + 10 && spaceAbove > spaceBelow) {
+          // Show above if more space there
+          y = Math.max(10, rect.top - 5);
+          // Adjust the popover to appear above, growing upward
+          const availableHeight = rect.top - 10;
+          if (availableHeight < popoverMaxHeight) {
+            // Position at top of screen if not enough space above
+            y = 10;
+          } else {
+            // Position above the cell
+            y = rect.top - Math.min(popoverMaxHeight, availableHeight) - 5;
+          }
+        }
+        
+        setPosition({ x, y });
+      };
+      
+      updatePosition();
+      // Update position on scroll or resize
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [show, targetElement]);
+  
+  if (!show || !content || typeof document === 'undefined') return null;
+  
+  return ReactDOM.createPortal(
+    <div
+      className="fixed z-[99999] bg-white border border-gray-300 rounded-lg shadow-xl p-3 max-w-md pointer-events-auto"
+      style={{ 
+        left: `${position.x}px`, 
+        top: `${position.y}px`,
+        maxHeight: '300px',
+        overflowY: 'auto',
+        wordBreak: 'break-word'
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
+      <div className="text-sm text-gray-700 whitespace-pre-wrap">{content}</div>
+    </div>,
+    document.body
+  );
+}
+
 // Custom cell renderer with state indicators and context menu
 function Cell({ 
   row, 
@@ -97,7 +193,7 @@ function Cell({
   const cellMeta = sheetRow?.meta?.[column.key];
   
   const [showPopover, setShowPopover] = useState(false);
-  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
+  const [targetElement, setTargetElement] = useState<HTMLElement | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const cellRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
@@ -110,7 +206,7 @@ function Cell({
     return textRef.current.scrollWidth > textRef.current.clientWidth;
   }, []);
   
-  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+  const handleMouseEnter = useCallback(() => {
     // Clear any existing timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
@@ -123,12 +219,8 @@ function Cell({
         return;
       }
       
-      const rect = cellRef.current?.getBoundingClientRect();
-      if (rect) {
-        setPopoverPosition({
-          x: rect.left,
-          y: rect.bottom + 5
-        });
+      if (cellRef.current) {
+        setTargetElement(cellRef.current);
         setShowPopover(true);
       }
     }, 1000);
@@ -208,23 +300,13 @@ function Cell({
         )}
       </div>
       
-      {/* Popover for truncated content */}
-      {showPopover && cellValue && (
-        <div
-          className="fixed z-[100] bg-white border border-gray-300 rounded-lg shadow-lg p-3 max-w-md"
-          style={{ 
-            left: popoverPosition.x, 
-            top: popoverPosition.y,
-            maxHeight: '300px',
-            overflowY: 'auto',
-            wordBreak: 'break-word'
-          }}
-          onMouseEnter={() => setShowPopover(true)}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="text-sm text-gray-700 whitespace-pre-wrap">{cellValue}</div>
-        </div>
-      )}
+      <CellPopover
+        show={showPopover}
+        content={cellValue}
+        targetElement={targetElement}
+        onMouseEnter={() => setShowPopover(true)}
+        onMouseLeave={handleMouseLeave}
+      />
     </>
   );
 }
