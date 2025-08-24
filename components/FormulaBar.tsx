@@ -53,11 +53,25 @@ export default function FormulaBar() {
       setIsExpanded(true);
       setEditValue(formula);
       setIsEditing(true);
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        // Place cursor at the end instead of selecting all
+        if (inputRef.current) {
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+        }
+      }, 0);
     } else if (!isAIColumn && currentCell) {
       setIsEditing(true);
       setEditValue(String(cellValue));
-      setTimeout(() => inputRef.current?.focus(), 0);
+      setTimeout(() => {
+        inputRef.current?.focus();
+        // Place cursor at the end instead of selecting all
+        if (inputRef.current) {
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+        }
+      }, 0);
     }
   };
   
@@ -101,9 +115,11 @@ export default function FormulaBar() {
   // Check if column is currently computing
   const isComputing = currentColumn && store.computeProgress[currentColumn.id]?.running > 0;
   
+  // Remove the auto-select behavior
   useEffect(() => {
     if (isEditing && inputRef.current) {
-      inputRef.current.select();
+      // Just focus, don't select all
+      inputRef.current.focus();
     }
   }, [isEditing]);
   

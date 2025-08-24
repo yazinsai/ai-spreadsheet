@@ -50,13 +50,13 @@ export interface Settings {
 
 // Model options configuration
 export const MODEL_OPTIONS = [
-  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'anthropic/claude-opus-4.1', label: 'Claude 4.1 Opus' },
   { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { id: 'openai/gpt-5', label: 'GPT-5 (OpenAI)' },
-  { id: 'anthropic/claude-opus-4.1', label: 'Claude 4.1 Opus' },
-  { id: 'meta-llama/llama-3.1-405b-instruct', label: 'Llama 3.1 405B Instruct' },
+  { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+  { id: 'deepseek/deepseek-r1-distill-llama-70b', label: 'DeepSeek: R1 Distill Llama 70B' },
   { id: 'mistral/mistral-large-latest', label: 'Mistral Large' },
-  { id: 'qwen/qwen2.5-72b-instruct', label: 'Qwen2.5 72B Instruct' },
+  { id: 'qwen/qwen-turbo', label: 'Qwen-Turbo' },
 ] as const;
 
 export type ModelId = typeof MODEL_OPTIONS[number]['id'];

@@ -39,6 +39,7 @@ body {
   --rdg-color: #000;
   --rdg-background-color: #fff;
   --rdg-header-background-color: #f9fafb;
+  --rdg-header-row-background-color: #f9fafb;
   --rdg-row-hover-background-color: #f3f4f6;
   --rdg-row-selected-background-color: #e0e7ff;
   --rdg-row-selected-hover-background-color: #c7d2fe;
@@ -54,6 +55,7 @@ body {
     --rdg-color: #e5e7eb;
     --rdg-background-color: #111827;
     --rdg-header-background-color: #1f2937;
+    --rdg-header-row-background-color: #1f2937;
     --rdg-row-hover-background-color: #374151;
     --rdg-row-selected-background-color: #312e81;
     --rdg-row-selected-hover-background-color: #3730a3;
@@ -137,14 +139,22 @@ body {
 /* Clean grid header styling */
 .rdg-header-row {
   font-weight: 500;
-  background: linear-gradient(to bottom, #ffffff, #f9fafb);
+  background: #f9fafb !important;
   border-bottom: 2px solid #e5e7eb;
+}
+
+.rdg-header-cell {
+  background: #f9fafb !important;
 }
 
 @media (prefers-color-scheme: dark) {
   .rdg-header-row {
-    background: linear-gradient(to bottom, #1f2937, #111827);
+    background: #1f2937 !important;
     border-bottom: 2px solid #374151;
+  }
+  
+  .rdg-header-cell {
+    background: #1f2937 !important;
   }
 }
 

@@ -36,6 +36,7 @@ interface AppState {
   loadSheet: (id: string) => Promise<void>;
   createSheet: (name: string) => Promise<void>;
   deleteSheet: (id: string) => Promise<void>;
+  updateSheet: (updates: Partial<Sheet>) => void;
   
   // Column operations
   addColumn: (name: string, kind: Column['kind'], after?: string) => void;
@@ -135,6 +136,20 @@ export const useStore = create<AppState>()(
       if (state.currentSheet?.id === id) {
         set({ currentSheet: null });
       }
+    },
+
+    updateSheet: (updates: Partial<Sheet>) => {
+      set((state) => {
+        if (!state.currentSheet) return state;
+        
+        return {
+          currentSheet: {
+            ...state.currentSheet,
+            ...updates,
+          },
+        };
+      });
+      get().autoSave();
     },
 
     // Column operations

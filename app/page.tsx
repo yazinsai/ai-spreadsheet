@@ -24,7 +24,10 @@ export default function Home() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [recentSheets, setRecentSheets] = useState<Array<{ id: string; name: string }>>([]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   
   // Initialize app on mount
   useEffect(() => {
@@ -123,6 +126,30 @@ export default function Home() {
     }
   };
   
+  const handleStartEditName = () => {
+    if (store.currentSheet) {
+      setEditedName(store.currentSheet.name);
+      setIsEditingName(true);
+      setTimeout(() => {
+        nameInputRef.current?.select();
+      }, 0);
+    }
+  };
+  
+  const handleSaveName = async () => {
+    if (store.currentSheet && editedName.trim() && editedName !== store.currentSheet.name) {
+      store.updateSheet({ name: editedName.trim() });
+      await store.saveSheet();
+      loadRecentSheets();
+    }
+    setIsEditingName(false);
+  };
+  
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setEditedName('');
+  };
+  
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -139,9 +166,32 @@ export default function Home() {
             {store.currentSheet && (
               <div className="flex items-center space-x-2">
                 <span className="text-gray-300 dark:text-gray-600">|</span>
-                <h2 className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {store.currentSheet.name}
-                </h2>
+                {isEditingName ? (
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveName();
+                      } else if (e.key === 'Escape') {
+                        handleCancelEditName();
+                      }
+                    }}
+                    onBlur={handleSaveName}
+                    className="text-sm font-medium bg-transparent border-b-2 border-blue-500 text-gray-900 dark:text-gray-100 outline-none px-1"
+                    autoFocus
+                  />
+                ) : (
+                  <h2 
+                    className="text-sm font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                    onClick={handleStartEditName}
+                    title="Click to rename"
+                  >
+                    {store.currentSheet.name}
+                  </h2>
+                )}
                 <span className="text-xs text-gray-400 dark:text-gray-500">
                   {store.currentSheet.rows.length} × {store.currentSheet.columns.length}
                 </span>
