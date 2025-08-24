@@ -68,6 +68,7 @@ body {
 .rdg-cell {
   border-right: 1px solid var(--rdg-border-color);
   border-bottom: 1px solid var(--rdg-border-color);
+  padding: 0 !important; /* Remove default padding to make backgrounds flush */
 }
 
 .rdg-cell-frozen-last {
@@ -145,6 +146,7 @@ body {
 
 .rdg-header-cell {
   background: #f9fafb !important;
+  padding: 0 !important; /* Remove default padding to make backgrounds flush */
 }
 
 @media (prefers-color-scheme: dark) {

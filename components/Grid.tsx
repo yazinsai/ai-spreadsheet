@@ -62,16 +62,16 @@ function HeaderCell({
   return (
     <div 
       className={clsx(
-        "flex items-center justify-between w-full h-full px-2",
+        "flex items-center justify-between w-full h-full",
         col?.kind === 'ai' && "cursor-pointer bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
       )}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}
       title={col?.kind === 'ai' ? 'Double-click to edit formula' : undefined}
     >
-      <span className="truncate font-medium">{column.name}</span>
+      <span className="truncate font-medium pl-2">{column.name}</span>
       {col?.kind === 'ai' && (
-        <span className="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full inline-flex items-center gap-1 font-semibold">
+        <span className="mr-2 px-1.5 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full inline-flex items-center gap-1 font-semibold">
           AI
         </span>
       )}
@@ -265,7 +265,7 @@ function Cell({
       <div 
         ref={cellRef}
         className={clsx(
-          'w-full h-full flex items-center px-2 relative',
+          'w-full h-full flex items-center relative',
           getCellClassName(),
           col?.kind === 'ai' && 'cursor-context-menu'
         )}
@@ -274,11 +274,11 @@ function Cell({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <span ref={textRef} className="truncate flex-1">{cellValue}</span>
+        <span ref={textRef} className="truncate flex-1 pl-2">{cellValue}</span>
         
         {/* Status indicators */}
         {cellMeta?.state === 'queued' && (
-          <div className="ml-2 flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+          <div className="pr-2 flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" opacity="0.3"/>
               <circle cx="12" cy="12" r="3" />
@@ -288,7 +288,7 @@ function Cell({
         )}
         
         {cellMeta?.state === 'running' && (
-          <div className="ml-2 flex items-center gap-1">
+          <div className="pr-2 flex items-center gap-1">
             <div className="relative">
               <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
               <div className="absolute inset-0 w-3 h-3 border-2 border-blue-300 rounded-full opacity-30 animate-ping" />
@@ -299,7 +299,7 @@ function Cell({
         
         {cellMeta?.state === 'error' && (
           <div 
-            className="ml-2 flex items-center gap-1 text-red-500 cursor-help" 
+            className="pr-2 flex items-center gap-1 text-red-500 cursor-help" 
             title={cellMeta.error || 'Error computing cell'}
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -310,7 +310,7 @@ function Cell({
         )}
         
         {cellMeta?.state === 'done' && col?.kind === 'ai' && cellValue && (
-          <div className="ml-2 text-green-500">
+          <div className="pr-2 text-green-500">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
