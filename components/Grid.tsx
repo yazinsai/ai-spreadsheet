@@ -241,7 +241,7 @@ function Cell({
       case 'queued':
         return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
       case 'running':
-        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 animate-pulse-subtle';
+        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
       case 'error':
         return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
       case 'done':
@@ -274,18 +274,46 @@ function Cell({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <span ref={textRef} className="truncate">{cellValue}</span>
-        {cellMeta?.state === 'running' && (
-          <div className="absolute right-1 top-1/2 -translate-y-1/2">
-            <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <span ref={textRef} className="truncate flex-1">{cellValue}</span>
+        
+        {/* Status indicators */}
+        {cellMeta?.state === 'queued' && (
+          <div className="ml-2 flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" opacity="0.3"/>
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span className="text-xs">Queued</span>
           </div>
         )}
+        
+        {cellMeta?.state === 'running' && (
+          <div className="ml-2 flex items-center gap-1">
+            <div className="relative">
+              <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              <div className="absolute inset-0 w-3 h-3 border-2 border-blue-300 rounded-full opacity-30 animate-ping" />
+            </div>
+            <span className="text-xs text-blue-600 dark:text-blue-400 animate-pulse">Processing...</span>
+          </div>
+        )}
+        
         {cellMeta?.state === 'error' && (
           <div 
-            className="absolute right-1 top-1/2 -translate-y-1/2 text-red-500 cursor-help" 
+            className="ml-2 flex items-center gap-1 text-red-500 cursor-help" 
             title={cellMeta.error || 'Error computing cell'}
           >
-            ⚠
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span className="text-xs">Failed</span>
+          </div>
+        )}
+        
+        {cellMeta?.state === 'done' && col?.kind === 'ai' && cellValue && (
+          <div className="ml-2 text-green-500">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
           </div>
         )}
       </div>
@@ -457,11 +485,21 @@ export default function Grid() {
         break;
         
       case 'compute':
-        store.startCompute(contextMenu.columnId);
+        store.startCompute(contextMenu.columnId).catch(err => {
+          console.error('Failed to start compute:', err);
+        });
         break;
         
       case 'retry':
-        store.startCompute(contextMenu.columnId, true);
+        store.startCompute(contextMenu.columnId, true).catch(err => {
+          console.error('Failed to start retry compute:', err);
+        });
+        break;
+        
+      case 'recompute':
+        store.startCompute(contextMenu.columnId, false, true).catch(err => {
+          console.error('Failed to start recompute all:', err);
+        });
         break;
         
       case 'stop':
@@ -595,13 +633,20 @@ export default function Grid() {
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                 onClick={() => handleContextMenuAction('compute')}
               >
-                Compute
+                Compute Unprocessed
               </button>
               <button
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                 onClick={() => handleContextMenuAction('retry')}
               >
                 Retry Failed
+              </button>
+              <button
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                onClick={() => handleContextMenuAction('recompute')}
+                title="Recompute all cells including completed ones"
+              >
+                Recompute All
               </button>
               {store.isComputing && (
                 <button

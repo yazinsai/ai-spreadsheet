@@ -18,6 +18,7 @@ import FormulaBar from '@/components/FormulaBar';
 import FormulaEditor from '@/components/FormulaEditor';
 import Settings from '@/components/Settings';
 import AppMenu from '@/components/AppMenu';
+import ComputeProgressOverlay from '@/components/ComputeProgressOverlay';
 
 export default function Home() {
   const store = useStore();
@@ -315,6 +316,9 @@ export default function Home() {
       {/* Modals */}
       <FormulaEditor />
       <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      
+      {/* Progress Overlay */}
+      <ComputeProgressOverlay />
     </div>
   );
 }

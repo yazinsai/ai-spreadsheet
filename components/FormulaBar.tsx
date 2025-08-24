@@ -106,9 +106,9 @@ export default function FormulaBar() {
   };
   
   // Handle compute all for current column
-  const handleComputeAll = () => {
+  const handleComputeAll = async () => {
     if (currentColumn && isAIColumn) {
-      store.startCompute(currentColumn.id);
+      await store.startCompute(currentColumn.id);
     }
   };
   

@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Sheet, Column, Row, Settings, CellState } from './types';
+import type { Sheet, Column, Row, Settings, CellState, ComputeTask } from './types';
 import { sheetDb, settingsDb, DEFAULT_SETTINGS } from './persist';
 
 interface ComputeProgress {
@@ -345,7 +345,7 @@ export const useStore = create<AppState>()(
     },
 
     // Compute operations
-    startCompute: (columnId: string, retry = false) => {
+    startCompute: async (columnId: string, retry = false, forceAll = false) => {
       const controller = new AbortController();
       set({
         isComputing: true,
@@ -354,26 +354,164 @@ export const useStore = create<AppState>()(
       
       // Initialize progress
       const state = get();
-      if (state.currentSheet) {
-        const total = state.currentSheet.rows.length;
-        const failed = retry
-          ? state.currentSheet.rows.filter(
-              r => r.meta?.[columnId]?.state === 'error'
-            ).length
-          : 0;
-        
-        set((s) => ({
-          computeProgress: {
-            ...s.computeProgress,
-            [columnId]: {
-              total: retry ? failed : total,
-              queued: retry ? failed : total,
-              running: 0,
-              done: 0,
-              failed: 0,
-            },
+      if (!state.currentSheet) return;
+      
+      const column = state.currentSheet.columns.find(c => c.id === columnId);
+      if (!column || column.kind !== 'ai' || !column.formula) {
+        console.error('Cannot compute - column not found or not AI column', { columnId, column });
+        set({ isComputing: false, abortController: null });
+        return;
+      }
+      
+      // Count cells that need processing
+      const unprocessedCount = forceAll 
+        ? state.currentSheet.rows.length
+        : state.currentSheet.rows.filter(row => {
+            const cellState = row.meta?.[columnId]?.state;
+            const cellValue = row.values[columnId];
+            return !(cellState === 'done' && cellValue);
+          }).length;
+      
+      const failedCount = state.currentSheet.rows.filter(
+        r => r.meta?.[columnId]?.state === 'error'
+      ).length;
+      
+      const toProcess = retry ? failedCount : unprocessedCount;
+      
+      set((s) => ({
+        computeProgress: {
+          ...s.computeProgress,
+          [columnId]: {
+            total: toProcess,
+            queued: toProcess,
+            running: 0,
+            done: 0,
+            failed: 0,
           },
-        }));
+        },
+      }));
+      
+      // Import required modules
+      const { parseFormula, renderTemplate } = await import('./formula');
+      const { batchCompletions } = await import('./ai');
+      
+      // Parse formula
+      const parsed = parseFormula(column.formula);
+      if ('error' in parsed) {
+        alert(`Invalid formula: ${parsed.error}`);
+        set({ isComputing: false, abortController: null });
+        return;
+      }
+      
+      // Prepare column map
+      const columnsByName = new Map(state.currentSheet.columns.map(col => [col.name, col]));
+      
+      // Build compute tasks
+      const tasks: ComputeTask[] = [];
+      const rowsToCompute = retry
+        ? state.currentSheet.rows.filter(row => row.meta?.[columnId]?.state === 'error')
+        : forceAll
+        ? state.currentSheet.rows
+        : state.currentSheet.rows.filter(row => {
+            // Skip rows that are already computed (have a value and state is 'done')
+            const cellState = row.meta?.[columnId]?.state;
+            const cellValue = row.values[columnId];
+            return !(cellState === 'done' && cellValue);
+          });
+      
+      for (const row of rowsToCompute) {
+        // Set initial state
+        get().updateCellState(row.id, columnId, 'queued');
+        
+        // Render template
+        const { rendered } = renderTemplate(
+          parsed.template,
+          row,
+          columnsByName,
+          state.settings.maxInputChars
+        );
+        
+        // Skip empty prompts
+        if (!rendered.trim()) {
+          get().updateCell(row.id, columnId, '');
+          get().updateCellState(row.id, columnId, 'done');
+          continue;
+        }
+        
+        tasks.push({
+          rowId: row.id,
+          columnId,
+          prompt: rendered,
+          modelId: parsed.options?.model || column.ai?.modelId || state.settings.defaultModelId,
+          temperature: parsed.options?.temperature ?? column.ai?.temperature ?? state.settings.defaultTemperature,
+          maxTokens: parsed.options?.maxTokens ?? column.ai?.maxTokens ?? state.settings.defaultMaxTokens,
+        });
+      }
+      
+      if (tasks.length === 0) {
+        console.log('No tasks to compute');
+        set({ isComputing: false, abortController: null });
+        return;
+      }
+      
+      console.log(`Starting compute with ${tasks.length} tasks`);
+      
+      // Process tasks with concurrency control
+      try {
+        await batchCompletions(
+          tasks,
+          state.settings.concurrency,
+          (result) => {
+            // Get current progress state from store
+            const currentProgress = get().computeProgress[columnId] || { 
+              total: 0, queued: 0, running: 0, done: 0, failed: 0 
+            };
+            
+            // Update cell with result
+            if (result.error) {
+              get().updateCellState(result.rowId, result.columnId, 'error', result.error);
+              get().updateComputeProgress(columnId, {
+                failed: currentProgress.failed + 1,
+                running: Math.max(0, currentProgress.running - 1),
+              });
+            } else {
+              get().updateCell(result.rowId, result.columnId, result.value);
+              get().updateCellState(result.rowId, result.columnId, 'done');
+              get().updateComputeProgress(columnId, {
+                done: currentProgress.done + 1,
+                running: Math.max(0, currentProgress.running - 1),
+              });
+            }
+            
+            // Auto-save periodically
+            const totalProcessed = currentProgress.done + currentProgress.failed + 1;
+            if (totalProcessed % 10 === 0) {
+              get().saveSheet();
+            }
+          },
+          controller.signal,
+          (task) => {
+            // Task is starting - move from queued to running
+            const currentProgress = get().computeProgress[columnId] || { 
+              total: 0, queued: 0, running: 0, done: 0, failed: 0 
+            };
+            get().updateCellState(task.rowId, task.columnId, 'running');
+            get().updateComputeProgress(columnId, {
+              running: currentProgress.running + 1,
+              queued: Math.max(0, currentProgress.queued - 1),
+            });
+          }
+        );
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Compute stopped by user');
+        } else {
+          console.error('Compute error:', error);
+          alert(`Compute failed: ${(error as Error).message}`);
+        }
+      } finally {
+        get().stopCompute();
+        get().saveSheet();
       }
     },
 
