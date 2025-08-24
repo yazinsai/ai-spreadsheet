@@ -1,252 +1,225 @@
-# AI Sheet - Intelligent Spreadsheet with AI Formulas
+# AI Sheet - Smart Spreadsheet with AI Formulas
 
-A single-user, client-side AI spreadsheet application that allows you to import CSVs, edit data, add AI formula columns, and batch-compute them across thousands of rows with progress tracking and retry capabilities.
+A powerful spreadsheet application that lets you use AI to transform and analyze your data. Think of it as Excel meets ChatGPT - you can write formulas that use AI to process your data automatically.
 
-## Features
+## What Can You Do With AI Sheet?
 
-- **CSV Import/Export**: Drag-and-drop or select CSV files with automatic delimiter detection and preview
-- **AI Formula Columns**: Create columns with AI-powered formulas using `=AI("...")` syntax
-- **Batch Processing**: Compute AI formulas across up to 10,000 rows × 40 columns with configurable concurrency
-- **Progress Tracking**: Real-time progress bars showing queued, running, completed, and failed cells
-- **Error Recovery**: Retry failed cells with updated prompts
-- **Local Persistence**: All data stored locally in IndexedDB for offline access
-- **Virtualized Grid**: Smooth scrolling and editing of large datasets using react-data-grid
-- **Model Selection**: Choose from multiple AI models (GPT-5, Claude 4.1, Gemini 2.5 Pro, etc.)
-- **Formula Templates**: Reference other columns using `{{ColumnName}}` placeholders
+- **Extract information** from messy text (emails, documents, reviews)
+- **Categorize and classify** data automatically
+- **Generate content** based on patterns in your data
+- **Translate** text between languages
+- **Summarize** long text into key points
+- **Clean and standardize** inconsistent data
+- And much more with custom AI prompts!
 
 ## Quick Start
 
-### Prerequisites
+### 1. Get the Code
 
-- Node.js 18+ and npm
-- OpenRouter API key (get one at [https://openrouter.ai/keys](https://openrouter.ai/keys))
+First, make sure you have [Node.js](https://nodejs.org/) installed (version 18 or higher).
 
-### Installation
-
-1. Clone the repository:
+Then download this project:
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/ai-spreadsheet.git
 cd ai-spreadsheet
 ```
 
-2. Install dependencies:
+### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.local.example .env.local
-# Edit .env.local and add your OPENROUTER_API_KEY
-```
+### 3. Start the Application
 
-4. Run the development server:
 ```bash
 npm run dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+Open your browser and go to [http://localhost:3000](http://localhost:3000)
 
-### Production Build
+### 4. Get an API Key
 
-```bash
-npm run build
-npm start
+You'll need an OpenRouter API key to use AI features:
+
+1. Sign up at [OpenRouter](https://openrouter.ai/)
+2. Go to [Keys](https://openrouter.ai/keys) and create a new key
+3. In AI Sheet, click the **Settings** button and paste your API key
+
+## How to Use AI Formulas
+
+### Basic Formula
+
+Type this in any cell:
+```
+=AI("Your prompt here")
 ```
 
-## Usage Guide
+### Using Data from Other Columns
 
-### Creating AI Formulas
-
-AI formulas use the syntax `=AI("template")` where the template can include placeholders for other columns:
-
+Reference other columns with `{{ColumnName}}`:
 ```
-=AI("Generate a product description for {{Product Name}}")
-=AI("Summarize the feedback: {{Customer Review}}")
-=AI("Translate {{English Text}} to Spanish")
+=AI("Summarize this text in one sentence: {{Description}}")
 ```
 
-### Advanced Formula Options
+### Examples
 
-You can override model settings directly in the formula:
-
+#### Extract Email Addresses
 ```
-=AI("Generate a creative story about {{Topic}}", {
-  "temperature": 0.9,
-  "maxTokens": 1000,
-  "model": "openai/gpt-5"
-})
+=AI("Extract the email address from: {{Contact Info}}")
 ```
 
-### Placeholder Syntax
-
-- **Column Reference**: `{{Column Name}}` - References the value from another column
-- **Escape Sequence**: `\{{` - Produces a literal `{` in the output
-- **Empty Values**: If a placeholder references an empty cell, it resolves to an empty string
-
-### Performance Tips
-
-1. **Concurrency**: Adjust concurrency in Settings (1-10 parallel requests)
-2. **Max Input Characters**: Set a limit to truncate long prompts
-3. **Batch Size**: The app automatically batches database writes for performance
-4. **Worker Mode**: CSV parsing happens in a web worker to keep the UI responsive
-
-## Architecture
-
-### Tech Stack
-
-- **Framework**: Next.js 15 (App Router) + TypeScript
-- **Styling**: Tailwind CSS
-- **Grid**: react-data-grid (virtualized)
-- **CSV**: PapaParse (worker mode)
-- **State**: Zustand (with persist middleware)
-- **Persistence**: Dexie (IndexedDB wrapper)
-- **AI**: OpenRouter API (supports multiple models)
-- **Concurrency**: p-limit for rate limiting
-
-### Data Flow
-
-1. **Import**: CSV → PapaParse Worker → Sheet Data Structure → IndexedDB
-2. **Edit**: User Input → Zustand Store → Auto-save to IndexedDB
-3. **Compute**: Formula → Template Rendering → OpenRouter API → Cell Updates
-4. **Export**: Sheet Data → PapaParse Unparse → CSV Download
-
-### Key Components
-
-- `Grid.tsx`: Main spreadsheet grid with context menus and cell editing
-- `FormulaEditor.tsx`: Modal for editing AI formulas with live preview
-- `ComputeControls.tsx`: Progress tracking and batch compute controls
-- `Settings.tsx`: Global configuration and API key management
-
-## Alternative Implementations
-
-Several architectural decisions were made with alternatives in mind:
-
-### Grid Library
-- **Current**: react-data-grid (lightweight, good virtualization)
-- **Alternative**: AG Grid Community (more features, heavier bundle)
-
-### State Management
-- **Current**: Zustand (simple, lightweight)
-- **Alternative**: Redux Toolkit (more boilerplate, better DevTools)
-
-### Persistence
-- **Current**: Dexie/IndexedDB (large storage, offline-first)
-- **Alternative**: localStorage (simpler but 5MB limit)
-
-### AI Integration
-- **Current**: Direct OpenRouter fetch (simple, flexible)
-- **Alternative**: Vercel AI SDK (streaming support, more abstraction)
-
-### Formula Parser
-- **Current**: Custom regex-based parser (lightweight)
-- **Alternative**: Parser combinator library (more robust, larger bundle)
-
-## Limitations
-
-- **Single-user only**: No multi-user collaboration or sharing
-- **Client-side only**: All processing happens in the browser
-- **No undo/redo**: Changes are immediately persisted
-- **No pagination**: Uses virtualized scrolling instead
-- **Rate limits**: Depends on your OpenRouter account limits
-- **Browser storage**: Limited by browser's IndexedDB quota
-
-## Development
-
-### Project Structure
-
+#### Categorize Products
 ```
-ai-spreadsheet/
-├── app/                 # Next.js app router pages
-│   ├── page.tsx        # Main application page
-│   ├── layout.tsx      # Root layout
-│   └── globals.css     # Global styles
-├── components/         # React components
-│   ├── Grid.tsx        # Spreadsheet grid
-│   ├── FormulaEditor.tsx
-│   ├── ComputeControls.tsx
-│   └── Settings.tsx
-├── lib/                # Core logic
-│   ├── types.ts        # TypeScript types
-│   ├── store.ts        # Zustand store
-│   ├── persist.ts      # Dexie/IndexedDB
-│   ├── ai.ts           # OpenRouter client
-│   ├── formula.ts      # Formula parsing
-│   └── csv.ts          # CSV import/export
-└── public/             # Static assets
+=AI("What category does this product belong to: {{Product Name}}? Choose from: Electronics, Clothing, Food, Other")
 ```
 
-### Commands
-
-```bash
-npm run dev      # Start development server
-npm run build    # Build for production
-npm run start    # Start production server
-npm run lint     # Run ESLint
+#### Sentiment Analysis
+```
+=AI("Is this review positive, negative, or neutral? {{Review Text}}")
 ```
 
-### Testing
+#### Generate Descriptions
+```
+=AI("Write a brief product description for {{Product}} that costs {{Price}}")
+```
 
-To test the application:
+#### Clean Data
+```
+=AI("Extract just the phone number from: {{Messy Contact Data}}")
+```
 
-1. Create a sample CSV file with headers
-2. Import it into the app
-3. Right-click a column header and select "Convert to AI Column"
-4. Edit the formula (e.g., `=AI("Summarize {{Column1}}")`)
-5. Click "Compute All" to process all rows
-6. Export the results as CSV
+### Choosing AI Models
+
+By default, formulas use GPT-4o Mini (fast and cheap). You can specify a different model:
+
+```
+=AI("Your prompt", model: "anthropic/claude-3.5-sonnet")
+```
+
+Popular models:
+- `openai/gpt-4o-mini` - Fast and affordable (default)
+- `openai/gpt-4o` - More capable, slower
+- `anthropic/claude-3.5-sonnet` - Great for complex tasks
+- `google/gemini-2.0-flash-exp` - Google's fast model
+
+## Tips for Beginners
+
+### Start Simple
+Begin with basic prompts and gradually make them more complex as you learn what works.
+
+### Be Specific
+Instead of: `=AI("Process this: {{Data}}")`
+Try: `=AI("Extract the year from this date: {{Date Column}}")`
+
+### Test on a Few Rows First
+Before running AI on thousands of rows, test your formula on 5-10 rows to make sure it works.
+
+### Use Templates
+Create a formula that works well? Save it as a template for future use.
+
+### Monitor Costs
+Each AI call costs a small amount. The app shows estimated costs before running formulas on many rows.
+
+## Working with Data
+
+### Import CSV Files
+Click **Import CSV** to load your existing spreadsheets. Supports files with thousands of rows.
+
+### Export Your Results
+Click **Export CSV** to save your data with all computed AI results.
+
+### Auto-Save
+Your work is automatically saved locally in your browser. Come back anytime and your data will be there.
+
+## Common Use Cases
+
+### Customer Feedback Analysis
+1. Import CSV with customer reviews
+2. Add formula: `=AI("What is the main complaint in this review: {{Review}}")`
+3. Add another: `=AI("Rate the sentiment from 1-10: {{Review}}")`
+4. Run formulas to analyze hundreds of reviews in minutes
+
+### Data Cleaning
+1. Import messy contact list
+2. Add formulas to extract and standardize:
+   - `=AI("Extract the person's full name: {{Raw Data}}")`
+   - `=AI("Extract and format the phone number as (XXX) XXX-XXXX: {{Raw Data}}")`
+   - `=AI("Extract the email address: {{Raw Data}}")`
+
+### Content Generation
+1. Start with product names and basic info
+2. Generate marketing copy: `=AI("Write a compelling 50-word product description for {{Product}} which is a {{Category}} priced at {{Price}}")`
+3. Create SEO titles: `=AI("Create an SEO-friendly title under 60 characters for {{Product}}")`
 
 ## Troubleshooting
 
-### Common Issues
+### "API Key Required"
+You need to add your OpenRouter API key in Settings. Get one free at [OpenRouter](https://openrouter.ai/).
 
-1. **API Key Not Working**
-   - Ensure your OpenRouter API key is valid
-   - Check that you have credits in your account
-   - Verify the key is saved in Settings
+### Formulas Not Running
+- Check your API key is valid
+- Make sure you clicked "Run AI" after writing formulas
+- Verify your formula syntax (needs `=AI("...")`)
 
-2. **Import Fails**
-   - Ensure CSV has a header row
-   - Check file size (< 100MB recommended)
-   - Verify proper CSV formatting
+### Slow Performance
+- Use a faster model like `gpt-4o-mini`
+- Reduce the number of concurrent requests in Settings
+- Process data in smaller batches
 
-3. **Compute Errors**
-   - Check formula syntax
-   - Verify referenced columns exist
-   - Monitor rate limits in OpenRouter dashboard
+### Results Look Wrong
+- Make your prompts more specific
+- Add examples to your prompt
+- Try a different AI model
 
-4. **Storage Full**
-   - Check browser storage quota in Settings
-   - Export and backup old sheets
-   - Clear browser data if needed
+## Keyboard Shortcuts
 
-## Security Considerations
+- `Enter` - Edit selected cell
+- `Escape` - Cancel editing
+- `Tab` - Move to next cell
+- `Shift+Tab` - Move to previous cell
+- `Ctrl/Cmd+C` - Copy
+- `Ctrl/Cmd+V` - Paste
+- `Ctrl/Cmd+Z` - Undo
+- `Ctrl/Cmd+Shift+Z` - Redo
 
-- **API Keys**: Stored in browser localStorage (consider risks)
-- **Data Privacy**: All data stays in your browser
-- **HTTPS Only**: API calls require secure connection
-- **No Backend**: No server-side processing or storage
+## Development
 
-## Contributing
+### Tech Stack
+- Next.js 15 with TypeScript
+- React Data Grid for virtualized rendering
+- Zustand for state management
+- IndexedDB for local storage
+- OpenRouter API for AI models
 
-This is a demonstration project. For production use, consider:
+### Commands
+```bash
+npm run dev    # Start development server
+npm run build  # Build for production
+npm run lint   # Run linting
+```
 
-- Implementing proper API key management
-- Adding authentication and authorization
-- Setting up server-side processing for large datasets
-- Implementing comprehensive error handling
-- Adding unit and integration tests
+### Contributing
+Contributions welcome! Please feel free to submit a Pull Request.
+
+## Privacy & Security
+
+- **Local Storage**: All your data is stored locally in your browser
+- **No Backend**: This app runs entirely in your browser - we don't have servers storing your data
+- **API Keys**: Your OpenRouter API key is stored only in your browser's local storage
+- **Direct API Calls**: AI requests go directly from your browser to OpenRouter
 
 ## License
 
-MIT
+MIT License - feel free to use this for anything!
 
-## Acknowledgments
+## Support
 
-Built with:
-- [Next.js](https://nextjs.org/)
-- [react-data-grid](https://github.com/adazzle/react-data-grid)
-- [PapaParse](https://www.papaparse.com/)
-- [Dexie.js](https://dexie.org/)
-- [Zustand](https://github.com/pmndrs/zustand)
-- [OpenRouter](https://openrouter.ai/)
+Having issues? 
+- Check the troubleshooting section above
+- Open an issue on GitHub
+- Review the [OpenRouter documentation](https://openrouter.ai/docs)
+
+---
+
+Built with ❤️ for making data work easier with AI
