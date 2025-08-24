@@ -51,7 +51,7 @@ interface AppState {
   deleteRow: (id: string) => void;
   
   // Compute operations
-  startCompute: (columnId: string, retry?: boolean) => void;
+  startCompute: (columnId: string, retry?: boolean, forceAll?: boolean) => Promise<void>;
   computeSingleCell: (rowId: string, columnId: string) => Promise<void>;
   stopCompute: () => void;
   updateComputeProgress: (columnId: string, progress: Partial<ComputeProgress>) => void;
@@ -209,7 +209,7 @@ export const useStore = create<AppState>()(
         
         const columns = state.currentSheet.columns.filter(col => col.id !== id);
         const rows = state.currentSheet.rows.map(row => {
-          const { [id]: _removed, ...values } = row.values;
+          const { [id]: _, ...values } = row.values;
           const meta = row.meta ? { ...row.meta } : undefined;
           if (meta) {
             delete meta[id];

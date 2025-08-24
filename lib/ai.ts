@@ -216,7 +216,7 @@ export async function batchCompletions(
 }
 
 // Model availability check (optional enhancement)
-export async function checkModelAvailability(_modelId: string): Promise<boolean> {
+export async function checkModelAvailability(): Promise<boolean> {
   const apiKey = getApiKey();
   if (!apiKey) return false;
 

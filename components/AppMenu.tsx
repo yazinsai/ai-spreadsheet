@@ -2,13 +2,21 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 
-interface MenuItem {
-  label: string;
-  onClick?: () => void;
-  divider?: boolean;
-  disabled?: boolean;
-  shortcut?: string;
-}
+type MenuItem = 
+  | {
+      label: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      shortcut?: string;
+      divider?: never;
+    }
+  | {
+      divider: true;
+      label?: never;
+      onClick?: never;
+      disabled?: never;
+      shortcut?: never;
+    };
 
 interface AppMenuProps {
   onNewSheet: () => void;
@@ -58,13 +66,13 @@ export default function AppMenu({
   const menuItems: MenuItem[] = [
     { label: 'New Sheet', onClick: () => { onNewSheet(); setIsOpen(false); }, shortcut: 'Ctrl+N' },
     { label: 'Import CSV...', onClick: handleImportClick, shortcut: 'Ctrl+O' },
-    { divider: true },
+    { divider: true } as MenuItem,
     { label: 'Export as CSV', onClick: () => { onExportCSV(); setIsOpen(false); }, disabled: !currentSheet, shortcut: 'Ctrl+S' },
     { label: 'Export Metadata', onClick: () => { onExportMeta(); setIsOpen(false); }, disabled: !currentSheet },
-    { divider: true },
+    { divider: true } as MenuItem,
     { label: 'Add Row', onClick: () => { onAddRow(); setIsOpen(false); }, disabled: !currentSheet, shortcut: 'Ctrl+Shift+R' },
     { label: 'Add Column', onClick: () => { onAddColumn(); setIsOpen(false); }, disabled: !currentSheet, shortcut: 'Ctrl+Shift+C' },
-    { divider: true },
+    { divider: true } as MenuItem,
     { label: 'Settings...', onClick: () => { onSettings(); setIsOpen(false); }, shortcut: 'Ctrl+,' },
   ];
 

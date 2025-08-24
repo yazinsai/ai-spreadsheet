@@ -320,7 +320,7 @@ function Cell({
       
       <CellPopover
         show={showPopover}
-        content={cellValue}
+        content={String(cellValue ?? '')}
         targetElement={targetElement}
         onMouseEnter={() => setShowPopover(true)}
         onMouseLeave={handleMouseLeave}
@@ -416,7 +416,8 @@ export default function Grid() {
   
   // Handle cell edits
   const handleRowsChange = useCallback((newRows: GridRow[], { indexes }: { indexes: number[] }) => {
-    if (!store.currentSheet) return;
+    const sheet = store.currentSheet;
+    if (!sheet) return;
     
     // Process only the changed rows
     indexes.forEach(index => {
@@ -426,7 +427,7 @@ export default function Grid() {
       if (!oldRow || !newRow) return;
       
       // Find which column changed
-      for (const col of store.currentSheet.columns) {
+      for (const col of sheet.columns) {
         // Skip AI columns as they shouldn't be directly editable
         if (col.kind === 'ai') continue;
         

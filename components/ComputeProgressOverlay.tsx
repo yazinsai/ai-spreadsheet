@@ -2,7 +2,6 @@
 
 import React, { useMemo, useEffect, useState } from 'react';
 import { useStore } from '@/lib/store';
-import { clsx } from 'clsx';
 
 export default function ComputeProgressOverlay() {
   const store = useStore();
