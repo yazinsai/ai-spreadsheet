@@ -17,6 +17,7 @@ import Grid from '@/components/Grid';
 import FormulaBar from '@/components/FormulaBar';
 import FormulaEditor from '@/components/FormulaEditor';
 import Settings from '@/components/Settings';
+import AppMenu from '@/components/AppMenu';
 
 export default function Home() {
   const store = useStore();
@@ -38,6 +39,10 @@ export default function Home() {
   const loadRecentSheets = async () => {
     const sheets = await sheetDb.getAll();
     setRecentSheets(sheets.slice(0, 5).map(s => ({ id: s.id, name: s.name })));
+  };
+  
+  const handleImportCSV = () => {
+    fileInputRef.current?.click();
   };
   
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,12 +161,25 @@ export default function Home() {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              AI Sheet
-            </h1>
+            <div className="flex items-center gap-2">
+              <AppMenu
+                onNewSheet={handleNewSheet}
+                onImportCSV={handleImportCSV}
+                onExportCSV={handleExportCSV}
+                onExportMeta={handleExportMetadata}
+                onAddRow={handleAddRow}
+                onAddColumn={handleAddColumn}
+                onSettings={() => setIsSettingsOpen(true)}
+                currentSheet={!!store.currentSheet}
+              />
+              <div className="w-px h-6 bg-gray-200 dark:bg-gray-600" />
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                AI Sheet
+              </h1>
+            </div>
             
             {store.currentSheet && (
               <div className="flex items-center space-x-2">
@@ -199,80 +217,8 @@ export default function Home() {
             )}
           </div>
           
-          <div className="flex items-center space-x-2">
-            {/* File Operations */}
-            <button
-              onClick={handleNewSheet}
-              className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              New Sheet
-            </button>
-            
-            <label className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer transition-colors">
-              Import CSV
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv,.txt"
-                onChange={handleFileSelect}
-                className="hidden"
-                disabled={isImporting}
-              />
-            </label>
-            
-            {store.currentSheet && (
-              <>
-                <button
-                  onClick={handleExportCSV}
-                  className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Export CSV
-                </button>
-                
-                <button
-                  onClick={handleExportMetadata}
-                  className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Export formulas and column configurations"
-                >
-                  Export Meta
-                </button>
-              </>
-            )}
-            
-            <div className="w-px h-5 bg-gray-200 dark:bg-gray-600" />
-            
-            {/* Edit Operations */}
-            {store.currentSheet && (
-              <>
-                <button
-                  onClick={handleAddRow}
-                  className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Add Row
-                </button>
-                
-                <button
-                  onClick={handleAddColumn}
-                  className="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Add Column
-                </button>
-              </>
-            )}
-            
-            <div className="w-px h-5 bg-gray-200 dark:bg-gray-600" />
-            
-            {/* Settings */}
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-              title="Settings"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
+          <div className="flex items-center">
+            {/* Just empty space or you can add other elements here */}
           </div>
         </div>
         
@@ -355,6 +301,16 @@ export default function Home() {
           </div>
         )}
       </main>
+      
+      {/* Hidden file input for import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv,.txt"
+        onChange={handleFileSelect}
+        className="hidden"
+        disabled={isImporting}
+      />
       
       {/* Modals */}
       <FormulaEditor />
