@@ -20,7 +20,7 @@ First, make sure you have [Node.js](https://nodejs.org/) installed (version 18 o
 
 Then download this project:
 ```bash
-git clone https://github.com/yourusername/ai-spreadsheet.git
+git clone https://github.com/yazinsai/ai-spreadsheet.git
 cd ai-spreadsheet
 ```
 
