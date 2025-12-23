@@ -91,18 +91,18 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold">Settings</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h2>
         </div>
         
         <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]">
           {/* API Configuration */}
           <div>
-            <h3 className="text-lg font-medium mb-4">API Configuration</h3>
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">API Configuration</h3>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 OpenRouter API Key
               </label>
               <div className="flex items-center space-x-2">
@@ -112,12 +112,12 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                   onChange={(e) => handleApiKeyChange(e.target.value)}
                   placeholder="sk-or-..."
                   className={clsx(
-                    'flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2',
+                    'flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100',
                     keyValidation === 'valid' 
-                      ? 'border-green-300 focus:ring-green-500'
+                      ? 'border-green-300 dark:border-green-600 focus:ring-green-500'
                       : keyValidation === 'invalid'
-                      ? 'border-red-300 focus:ring-red-500'
-                      : 'border-gray-300 focus:ring-blue-500'
+                      ? 'border-red-300 dark:border-red-600 focus:ring-red-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
                   )}
                 />
                 {isValidatingKey && (
@@ -130,13 +130,13 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                   <span className="text-red-600">✗</span>
                 )}
               </div>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Get your API key from{' '}
                 <a 
                   href="https://openrouter.ai/keys" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   OpenRouter
                 </a>
@@ -146,11 +146,11 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
           
           {/* Default Model Settings */}
           <div>
-            <h3 className="text-lg font-medium mb-4">Default Model Settings</h3>
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Default Model Settings</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Default Model
                 </label>
                 <ModelSelector
@@ -160,7 +160,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Default Temperature ({settings.defaultTemperature})
                 </label>
                 <input
@@ -180,7 +180,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Default Max Tokens
                 </label>
                 <input
@@ -191,7 +191,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                   onChange={(e) => store.updateSettings({ 
                     defaultMaxTokens: parseInt(e.target.value) || 512 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -199,11 +199,11 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
           
           {/* Performance Settings */}
           <div>
-            <h3 className="text-lg font-medium mb-4">Performance</h3>
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Performance</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Concurrency ({settings.concurrency} parallel requests)
                 </label>
                 <input
@@ -222,7 +222,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Max Input Characters (0 = unlimited)
                 </label>
                 <input
@@ -234,7 +234,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                   onChange={(e) => store.updateSettings({ 
                     maxInputChars: parseInt(e.target.value) || 0 
                   })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-sm text-gray-500 mt-1">
                   Truncate rendered prompts to this length (per row)
@@ -245,14 +245,14 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
           
           {/* Data Management */}
           <div>
-            <h3 className="text-lg font-medium mb-4">Data Management</h3>
+            <h3 className="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Data Management</h3>
             
             <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   Storage: {storageInfo.formatBytes(storageUsage.used)} / {storageInfo.formatBytes(storageUsage.quota)}
                 </p>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div 
                     className="bg-blue-500 h-2 rounded-full"
                     style={{ 
@@ -294,10 +294,10 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
           </div>
         </div>
         
-        <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </button>

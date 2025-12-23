@@ -28,6 +28,7 @@ export default function Home() {
   const [recentSheets, setRecentSheets] = useState<Array<{ id: string; name: string }>>([]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   
@@ -49,7 +50,10 @@ export default function Home() {
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+    await processCSVFile(file);
+  };
+  
+  const processCSVFile = async (file: File) => {
     // Validate file
     const validation = validateCSVFile(file);
     if (!validation.valid) {
@@ -156,6 +160,38 @@ export default function Home() {
     setEditedName('');
   };
   
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const csvFile = files.find(file => 
+      file.type === 'text/csv' || 
+      file.name.endsWith('.csv') || 
+      file.name.endsWith('.txt')
+    );
+    
+    if (csvFile) {
+      await processCSVFile(csvFile);
+    } else if (files.length > 0) {
+      alert('Please drop a CSV file');
+    }
+  };
+  
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -248,12 +284,29 @@ export default function Home() {
         {store.currentSheet ? (
           <Grid />
         ) : (
-          <div className="h-full flex items-center justify-center">
+          <div 
+            className="h-full flex items-center justify-center relative"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {/* Drag overlay */}
+            {isDragging && (
+              <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900/50 border-4 border-dashed border-blue-400 dark:border-blue-500 rounded-lg flex items-center justify-center z-10">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="text-lg font-semibold text-blue-700 dark:text-blue-300">Drop CSV file here</p>
+                </div>
+              </div>
+            )}
+            
             <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+              <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-4">
                 Welcome to AI Sheet
               </h2>
-              <p className="text-gray-600 mb-8 max-w-md">
+              <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md">
                 Import a CSV file or create a new sheet to get started.
                 Add AI-powered columns to generate content using your data.
               </p>
@@ -279,9 +332,13 @@ export default function Home() {
                   </label>
                 </div>
                 
+                <p className="text-sm text-gray-500 dark:text-gray-500">
+                  or drag and drop a CSV file anywhere on this page
+                </p>
+                
                 {recentSheets.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-sm font-medium text-gray-700 mb-2">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">
                       Recent Sheets
                     </h3>
                     <div className="space-y-1">
@@ -289,7 +346,7 @@ export default function Home() {
                         <button
                           key={sheet.id}
                           onClick={() => store.loadSheet(sheet.id)}
-                          className="block w-full px-4 py-2 text-left text-sm bg-white border border-gray-200 rounded hover:bg-gray-50"
+                          className="block w-full px-4 py-2 text-left text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-200"
                         >
                           {sheet.name}
                         </button>
