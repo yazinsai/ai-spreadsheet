@@ -48,18 +48,45 @@ export interface Settings {
   maxInputChars?: number;       // Optional truncation limit (0 = unlimited)
 }
 
-// Model options configuration
-export const MODEL_OPTIONS = [
-  { id: 'anthropic/claude-opus-4.1', label: 'Claude 4.1 Opus' },
+// Model ID is a string (dynamic from API)
+export type ModelId = string;
+
+// OpenRouter model from API response
+export interface OpenRouterModel {
+  id: string;
+  name: string;
+  description?: string;
+  context_length: number;
+  pricing: {
+    prompt: string;
+    completion: string;
+  };
+}
+
+// Model option for display in combobox
+export interface ModelOption {
+  id: string;
+  label: string;
+  contextLength?: number;
+  pricing?: string;
+}
+
+// Cached model list with timestamp
+export interface CachedModelList {
+  models: ModelOption[];
+  fetchedAt: number;
+}
+
+// Fallback model options (used when API fetch fails)
+export const FALLBACK_MODEL_OPTIONS: ModelOption[] = [
+  { id: 'anthropic/claude-sonnet-4', label: 'Claude Sonnet 4' },
   { id: 'google/gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-  { id: 'openai/gpt-5', label: 'GPT-5 (OpenAI)' },
+  { id: 'openai/gpt-4.1', label: 'GPT-4.1 (OpenAI)' },
   { id: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { id: 'deepseek/deepseek-r1-distill-llama-70b', label: 'DeepSeek: R1 Distill Llama 70B' },
   { id: 'mistral/mistral-large-latest', label: 'Mistral Large' },
   { id: 'qwen/qwen-turbo', label: 'Qwen-Turbo' },
-] as const;
-
-export type ModelId = typeof MODEL_OPTIONS[number]['id'];
+];
 
 // Formula parsing result
 export interface ParsedFormula {

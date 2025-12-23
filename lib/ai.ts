@@ -1,7 +1,7 @@
 // OpenRouter AI integration for LLM calls
 // Alternative: Consider using Vercel AI SDK for streaming support
 
-import type { ComputeTask, ComputeResult } from './types';
+import type { ComputeTask, ComputeResult, OpenRouterModel } from './types';
 import pLimit from 'p-limit';
 
 // OpenRouter API configuration
@@ -258,4 +258,21 @@ export function clearApiKey(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('OPENROUTER_API_KEY');
   }
+}
+
+// Fetch available models from OpenRouter API (no auth required)
+export async function fetchModelsFromAPI(
+  signal?: AbortSignal
+): Promise<OpenRouterModel[]> {
+  const response = await fetch(`${OPENROUTER_BASE_URL}/models`, {
+    method: 'GET',
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch models: HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.data || [];
 }

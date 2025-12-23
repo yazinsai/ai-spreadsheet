@@ -5,13 +5,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/lib/store';
-import { 
-  parseFormula, 
-  validateFormula, 
+import {
+  parseFormula,
+  validateFormula,
   renderTemplate,
-  generateExampleFormula 
+  generateExampleFormula
 } from '@/lib/formula';
-import { MODEL_OPTIONS } from '@/lib/types';
+import ModelSelector from './ModelSelector';
 import { clsx } from 'clsx';
 
 export default function FormulaEditor() {
@@ -151,17 +151,7 @@ export default function FormulaEditor() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Model
               </label>
-              <select
-                value={modelId}
-                onChange={(e) => setModelId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {MODEL_OPTIONS.map(model => (
-                  <option key={model.id} value={model.id}>
-                    {model.label}
-                  </option>
-                ))}
-              </select>
+              <ModelSelector value={modelId} onChange={setModelId} />
             </div>
             
             <div>

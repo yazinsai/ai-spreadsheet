@@ -5,9 +5,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
-import { MODEL_OPTIONS } from '@/lib/types';
 import { setApiKey, validateApiKey } from '@/lib/ai';
 import { backupDb, storageInfo } from '@/lib/persist';
+import ModelSelector from './ModelSelector';
 import { clsx } from 'clsx';
 
 interface SettingsProps {
@@ -153,17 +153,10 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Default Model
                 </label>
-                <select
+                <ModelSelector
                   value={settings.defaultModelId}
-                  onChange={(e) => store.updateSettings({ defaultModelId: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {MODEL_OPTIONS.map(model => (
-                    <option key={model.id} value={model.id}>
-                      {model.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => store.updateSettings({ defaultModelId: id })}
+                />
               </div>
               
               <div>
